@@ -6,13 +6,13 @@ Esse projeto foi feito utilizando *Python*, com *Flask* sendo o *framework*, o b
 
 Esse é um projeto feito por **Pedro Souza de Azevedo** como *MVP* para a disciplina de **Desenvolvimento *Full-Stack* Básico**, do curso de pós-graduação da ***PUC-Rio***.
 
-O *Front-end* desse projeto está aqui: https://github.com/Pedro-dev-083/
+O *Front-end* desse projeto está aqui: https://github.com/Pedro-dev-083/front-favorite-movies
 
 ## Como configurar o projeto
 ### Clonagem do projeto:
 Para clonar o projeto em sua máquina, é necessário ter o Git instalado, e então, você pode usar o seguinte comando:
 
-    clone
+    git clone https://github.com/Pedro-dev-083/api-favorite-movies.git
 Logo após ao clonar, você pode abrir a pasta, e acessar o terminal dentro dela para seguir os próximos passos.
 
 ### Banco de dados:
@@ -82,3 +82,10 @@ Se não funcionou, verifique os passos anteriores, e tente novamente.
 Esse projeto foi desenvolvido usando ***OpenAPI***, tendo o *Swagger* como documentação. Com o projeto aberto, você pode acessar o link que o terminal gerou, ou acessando o http://localhost:5000/ .
 
 Lá você irá encontrar todas as rotas que estão disponibilizadas para uso dentro desse projeto. Como por exemplo, a rota http://localhost:5000/movies que irá retornar todos os filmes salvos no banco.
+
+## Considerações Finais
+Esse projeto foi utilizado apenas o *Python* com *Flask* e *SQLAlchemy*, tendo como objetivo a construção de uma API REST básica, com os recursos disponíveis.
+
+Dentro desse ponto, utilizar *Python*, uma tecnologia que por muito tempo ignorei, está sendo satisfatório, pois estou tendo a possibilidade de sair das tecnologias que eu estava acostumado, e podendo colocar minha lógica de programação mais em dia.
+
+Tentei adaptar o projeto a certas ideias que tenho conhecimento, como o uso de Services, e acredito que foi interessante por em prática tudo que fui aprendendo conforme o desenvolvimento. E espero conseguir seguir assim até o final do curso.
