@@ -5,7 +5,7 @@
 
 Versão: 2.0
 
-Esse projeto foi feito utilizando *Python*, com *Flask* sendo o *framework*, possuindo rotas para o *Front-End* em formato ***REST***, e recebendo informações de outros componentes, como a *API* Externa: https://www.omdbapi.com/ e o componente de dados: .
+Esse projeto foi feito utilizando *Python*, com *Flask* sendo o *framework*, possuindo rotas para o *Front-End* em formato ***REST***, e recebendo informações de outros componentes, como a *API* Externa: https://www.omdbapi.com/ e o componente de dados.
 
 Esse é um projeto feito por **Pedro Souza de Azevedo** como *MVP* para a disciplina de **Arquitetura de Software**, do curso de pós-graduação da ***PUC-Rio***.
 
