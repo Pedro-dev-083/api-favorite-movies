@@ -1,231 +1,394 @@
 """Módulo de execução de toda aplicação do python"""
+import os
 
 from flask_cors import CORS
-from flask_openapi3 import OpenAPI, Info, Tag
-from flask import redirect
-
-from sqlalchemy.exc import IntegrityError
-
-from model import Session
+from flask import Flask, request, redirect
+from flask_restful import Api
+from flask_swagger_ui import get_swaggerui_blueprint
+from flasgger import Swagger
+import requests
+from dotenv import load_dotenv
+from models import ErrorModel
 from logger import logger
-# pylint: disable=W0401:wildcard-import
-from schemas import *
-from services.movie_service import MovieService
-from services.genre_service import GenreService
 
-info = Info(title="API Filmes Favoritos", version="1.0.0")
-app = OpenAPI(__name__, info=info)
+load_dotenv()
+
+app = Flask(__name__)
+api = Api(app)
+
+swagger = Swagger(app)
+
 CORS(app)
 
-# definindo tags
+app.config['API_KEY'] = os.getenv('API_KEY')
 
-movie_tag = Tag(name="Filmes", description="Rotas para o controle de filmes")
-genre_tag = Tag(name="Gêneros", description="Rotas para o controle de gêneros")
+SWAGGER_URL = '/swagger'
+API_URL = '/static/api_spec.yml'
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL, API_URL, config={'app_name': "API Filmes Favoritos"})
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
-@app.get('/movies', tags=[movie_tag],
-         responses={"200": ListMoviesSchema, "404": ErrorSchema})
-def get_movies():
-    """Faz a busca por todos os filmes cadastrados
-
-    Retorna uma representação da listagem dos filmes.
+@app.get('/movieById')
+def get_movie_by_id():
     """
-    logger.debug("Coletando todos os filmes ")
-    # criando conexão com a base
-    session = Session()
-    movie_service = MovieService(session)
-    movies = movie_service.get_all_movies()
-
-
-    if not movies:
-        # se não há filmes cadastrados
-        return {"filmes": []}, 200
-
-    logger.debug("%s Filmes encontrados", len(movies))
-    return show_movies(movies), 200
-
-# O correto é fazer a requisição por GET,
-# mas quando tento de outra forma, cai em um problema de CORS
-@app.post('/movie/id', tags=[movie_tag],
-         responses={"200": MovieViewSchema, "404": ErrorSchema})
-def get_movie(form: IdSchema):
-    """Faz a busca por um filme baseado no Id
-
-    Retorna uma representação da listagem dos filmes.
+    Faz a busca do filme pelo ID
     """
-    logger.debug("Coletando todos os filmes ")
-    # criando conexão com a base
-    session = Session()
-    movie_service = MovieService(session)
-    movie = movie_service.get_movie(form.id)
-
-
-    if not movie:
-        # se não há filme
-        logger.debug("Não existe filme com esse ID")
-        return {"message": "Não existe filme com esse ID"}, 400
-
-    logger.debug("Filme foi encontrado")
-    return show_movie(movie), 200
-
-@app.post('/movie', tags=[movie_tag],
-         responses={"200": MovieViewSchema, "404": ErrorSchema})
-def add_movie(form: MovieSchema):
-    """Adiciona um novo Filme à base de dados
-    Retorna uma representação do filme.
-    """
-    logger.debug("Adicionando filme de nome: '%s'", form.name)
     try:
-        # criando conexão com a base
-        session = Session()
-        movie_service = MovieService(session)
-        movie = movie_service.create_movie(form.name, form.year, form.img, form.genre_names)
-        logger.debug("Adicionado filme de nome: '%s'", movie.name)
-        return show_movie(movie), 200
+        external_id = request.args.get('externalId')
+        logger.debug("Coletando o filme pela API externa ")
+        response = requests.get(
+            f'https://www.omdbapi.com/?i={external_id}&apikey={app.config["API_KEY"]}', timeout=30)
+        data = response.json()
+        if data.get('Response') == "True":
+            response_data = {
+                "title": data.get('Title', 'Unknown Title'),
+                "year": data.get('Year', 'Unknown Year'),
+                "genre": data.get('Genre', 'Unknown Genre'),
+                "plot": data.get('Plot', 'No Plot Available'),
+                "poster": data.get('Poster', 'No Poster Available'),
+                "rated": data.get('Rated', 'No Rated Available'),                
+                "imdbID": external_id
+            }
+            logger.debug("%s Filme encontrado: ", response_data)
+            return response_data, 200
 
-    except IntegrityError as e:
-        # como a duplicidade do nome é a provável razão do IntegrityError
-        error_msg = e.args[0]
-        logger.warning("Erro ao adicionar filme '%s', %s", form.name, error_msg)
-        return {"message": error_msg}, 409
-
-    except ValueError as e:
-        # caso tente criar um filme com um gênero não existente
-        error_msg = e.args[0]
-        logger.warning("Erro ao adicionar filme '%s', %s", form.name, error_msg)
-        return {"message": error_msg}, 400
-
+        error = ErrorModel(
+            message='Filme não foi encontrado',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
     # pylint: disable=W0718:broad-exception-caught
-    except Exception as e:
-        # caso um erro fora do previsto
-        error_msg = "Não foi possível salvar novo filme"
-        logger.warning("Erro ao adicionar filme '%s', %s", form.name, e.args[0])
-        return {"message": error_msg}, 500
+    except Exception as ex:
+        error = ErrorModel(
+            message='Erro ao tentar recuperar filme',
+            execption=str(ex)
+        )
+        logger.error(error)
+        return dict(error), 500
 
-@app.put('/movie', tags=[movie_tag],
-         responses={"200": MovieViewSchema, "404": ErrorSchema})
-def update_movie(form: MovieUpdateSchema):
-    """Atualiza um Filme à base de dados
-    Retorna uma representação do filme.
+@app.get('/movieByName')
+def get_movie_by_name():
     """
-    logger.debug("Atualizando filme de nome: '%s'", form.name)
+    Faz a busca do filme pelo nome
+    """
+    name = request.args.get('name')
+    response = requests.get(
+        f'https://www.omdbapi.com/?t={name}&apikey={app.config["API_KEY"]}', timeout=30)
     try:
-        # criando conexão com a base
-        session = Session()
-        movie_service = MovieService(session)
-        movie = movie_service.update_movie(form.id,
-                                           form.name, form.year, form.img, form.genre_names)
-        logger.debug("Atualizado filme de nome: '%s'", movie.name)
-        return show_movie(movie), 200
+        data = response.json()
+        if data.get('Response') == "True":
+            response_data = {
+                "title": data.get('Title', 'Unknown Title'),
+                "year": data.get('Year', 'Unknown Year'),
+                "genre": data.get('Genre', 'Unknown Genre'),
+                "plot": data.get('Plot', 'No Plot Available'),
+                "poster": data.get('Poster', 'No Poster Available'),
+                "rated": data.get('Rated', 'No Rated Available'),   
+                "imdbID": data.get('imdbID', 'No ImdbID Available')
+            }
+            logger.debug("%s Filme encontrado: ", response_data)
+            return response_data, 200
 
-    except IntegrityError as e:
-        # como a duplicidade do nome é a provável razão do IntegrityError
-        error_msg = e.args[0]
-        logger.warning("Erro ao atualizar filme '%s', %s", form.name, error_msg)
-        return {"message": error_msg}, 409
-
-    except ValueError as e:
-        # caso tente atualizar um filme com um gênero não existente
-        error_msg = e.args[0]
-        logger.warning("Erro ao atualizar filme '%s', %s", form.name, error_msg)
-        return {"message": error_msg}, 400
-
+        error = ErrorModel(
+            message='Filme não foi encontrado',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
     # pylint: disable=W0718:broad-exception-caught
-    except Exception as e:
-        # caso um erro fora do previsto
-        error_msg = "Não foi possível atualizar filme"
-        logger.warning("Erro ao atualizar filme '%s', %s", form.name, e.args[0])
-        return {"message": error_msg}, 500
+    except Exception as ex:
+        error = ErrorModel(
+            message='Erro ao tentar recuperar filme',
+            execption=str(ex)
+        )
+        logger.error(error)
+        return dict(error), 500
 
-@app.delete('/movie/id', tags=[movie_tag],
-         responses={"200": GenericSchema, "404": ErrorSchema})
-def delete_movie(form: IdSchema):
-    """Exclui um filme baseado no Id
-
-    Retorna uma confirmação de deleção.
+@app.get('/movieOnBase')
+def get_movie_on_base():
     """
-    logger.debug("Começando a deletar o filme ")
-    # criando conexão com a base
+    Faz a busca do filme pelo id da base
+    """
+    id_base = request.args.get('id')
+    query = '''
+        query GetMovie($id: Int!){
+            movie(id: $id) {
+                id
+                name
+                external_Id
+                favorite
+            }
+        }
+    '''
+    variables = {'id': int(id_base)}
+
+    url = 'http://movie-graphql-container:8080/graphql/'
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'query': query,
+        'variables': variables or {}
+    }
+
     try:
-        session = Session()
-        movie_service = MovieService(session)
-        movie_service.delete_movie(form.id)
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        if response.status_code == 200:
+            data_response = response.json()
+            logger.debug("%s Filme encontrado: ", data_response)
+            return data_response, response.status_code
 
-    except ValueError as e:
-        # caso tente criar um filme com um gênero não existente
-        error_msg = e.args[0]
-        logger.warning("Erro ao adicionar filme '%s', %s", form.name, error_msg)
-        return {"message": error_msg}, 400
-
+        error = ErrorModel(
+            message='Filme não foi encontrado',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
     # pylint: disable=W0718:broad-exception-caught
-    except Exception as e:
-        # caso um erro fora do previsto
-        error_msg = "Não foi possível salvar novo filme"
-        logger.warning("Erro ao adicionar filme '%s', %s", form.name, e.args[0])
-        return {"message": error_msg}, 500
+    except Exception as ex:
+        error = ErrorModel(
+            message='Erro ao tentar recuperar filme',
+            execption=str(ex)
+        )
+        logger.error(error)
+        return dict(error), 500
 
-    logger.debug("Filme foi deletado")
-    return {"message": "Filme foi deletado com sucesso"}, 200
-
-@app.get('/genres', tags=[genre_tag],
-         responses={"200": ListGenresSchema, "404": ErrorSchema})
-def get_genres():
-    """Faz a busca por todos os gêneros cadastrados
-
-    Retorna uma representação da listagem dos gêneros.
+@app.get('/moviesOnBase')
+def get_all_movies():
     """
-    logger.debug("Coletando todos os gêneros ")
-    # criando conexão com a base
-    session = Session()
-    genre_service = GenreService(session)
-    genres = genre_service.get_all_genres()
-
-
-    if not genres:
-        # se não há gêneros cadastrados
-        return {"Gêneros": []}, 200
-
-    logger.debug("%s Gêneros encontrados", len(genres))
-    return show_genres(genres), 200
-
-@app.post('/genre', tags=[genre_tag],
-         responses={"200": GenreViewSchema, "404": ErrorSchema})
-def add_genre(form: GenreSchema):
-    """Adiciona um novo gênero à base de dados
-    Retorna uma representação do gênero.
+    Faz a busca do filme pelo id da base
     """
-    logger.debug("Adicionando gênero: '%s'", form.name)
+    query = '''
+        query {
+          movies {
+            external_Id
+            favorite
+            id
+            name
+          }
+        }
+    '''
+
+    url = 'http://movie-graphql-container:8080/graphql/'
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'query': query,
+        'variables': {}
+    }
+
     try:
-        # criando conexão com a base
-        session = Session()
-        genre_service = GenreService(session)
-        genre = genre_service.create_genre(form.name)
-        logger.debug("Adicionado gênero: '%s'", genre.name)
-        return show_genre(genre), 200
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        if response.status_code == 200:
+            data_response = response.json()
+            logger.debug("%s Filme encontrado: ", data_response)
+            return data_response, response.status_code
 
-    except IntegrityError as e:
-        # como a duplicidade do nome é a provável razão do IntegrityError
-        error_msg = e.args[0]
-        logger.warning("Erro ao adicionar gênero '%s', %x", form.name, error_msg)
-        return {"message": error_msg}, 409
-
-    except ValueError as e:
-        # caso tente criar um filme com um gênero não existente
-        error_msg = e.args[0]
-        logger.warning("Erro ao adicionar gênero '%s', %x", form.name, error_msg)
-        return {"message": error_msg}, 400
-
+        error = ErrorModel(
+            message='Nenhum filme foi encontrado na base',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
     # pylint: disable=W0718:broad-exception-caught
-    except Exception as e:
-        # caso um erro fora do previsto
-        error_msg = "Erro interno ao tentar salvar um gênero"
-        logger.warning("Erro ao adicionar gênero '%s', %x", form.name, error_msg)
-        return {"message": error_msg}, 500
+    except Exception as ex:
+        error = ErrorModel(
+            message='Erro ao tentar recuperar filme',
+            execption=str(ex)
+        )
+        logger.error(error)
+        return dict(error), 500
+
+@app.post('/movieOnBase')
+def post_movie_on_base():
+    """
+    Insere o filme na base
+    """
+    data = request.get_json()
+
+    if not data:
+        error = ErrorModel(
+            message='Nenhuma informação JSON foi especificada',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
+
+    query = '''
+        mutation AddMovie($name: String!, $externalId: String!, $favorite:Boolean){
+              addMovie(name: $name, external_Id: $externalId, favorite: $favorite) {
+                id
+                name
+                external_Id
+                favorite
+            }
+        }
+    '''
+    variables = {
+        'name': data.get('name', ''),
+        'externalId': data.get('external_Id', ''),
+        'favorite': data.get('favorite', '')
+    }
+
+
+    url = 'http://movie-graphql-container:8080/graphql/'
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'query': query,
+        'variables': variables or {}
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        if response.status_code == 200:
+            data_response = response.json()
+            logger.debug("%s Filme Adicionado: ", data_response)
+            return data_response, response.status_code
+
+        error = ErrorModel(
+            message='Algum parâmetro foi entregue errado',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
+    # pylint: disable=W0718:broad-exception-caught
+    except Exception as ex:
+        error = ErrorModel(
+            message='Erro ao tentar recuperar filme',
+            execption=str(ex)
+        )
+        logger.error(error)
+        return dict(error), 500
+
+@app.put('/movieOnBase')
+def update_movie_on_base():
+    """
+    Atualiza o filme na base
+    """
+    data = request.get_json()
+
+    if not data:
+        error = ErrorModel(
+            message='Nenhuma informação JSON foi especificada',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
+
+    query = '''
+        mutation UpdateMovie($id: Int!, $favorite:Boolean){
+              updateMovie(id: $id, favorite: $favorite) {
+                id
+                name
+                external_Id
+                favorite
+            }
+        }
+    '''
+    variables = {
+        'id': data.get('id', ''),
+        'favorite': data.get('favorite', '')
+    }
+
+    url = 'http://movie-graphql-container:8080/graphql/'
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'query': query,
+        'variables': variables or {}
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        if response.status_code == 200:
+            data_response = response.json()
+            logger.debug("%s Filme Atualizado: ", data_response)
+            return data_response, response.status_code
+
+        error = ErrorModel(
+            message='Algum parâmetro foi entregue errado',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
+    # pylint: disable=W0718:broad-exception-caught
+    except Exception as ex:
+        error = ErrorModel(
+            message='Erro ao tentar recuperar filme',
+            execption=str(ex)
+        )
+        logger.error(error)
+        return dict(error), 500
+
+@app.delete('/movieOnBase')
+def delete_movie_on_base():
+    """
+    Deleta o filme na base
+    """
+    data = request.get_json()
+
+    if not data:
+        error = ErrorModel(
+            message='Nenhuma informação JSON foi especificada',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
+
+    query = '''
+        mutation RemoveMovie($id: Int!){
+            removeMovie(id: $id){
+                message
+                success
+            }
+        }
+    '''
+    variables = {
+        'id': data.get('id', ''),
+    }
+
+    url = 'http://movie-graphql-container:8080/graphql/'
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'query': query,
+        'variables': variables or {}
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        if response.status_code == 200:
+            data_response = response.json()
+            logger.debug("%s Filme Deletado: ", data_response)
+            return data_response, response.status_code
+
+        error = ErrorModel(
+            message='Algum parâmetro foi entregue errado',
+            execption='Não houve exceção'
+        )
+        logger.error(error)
+        return dict(error), 400
+    # pylint: disable=W0718:broad-exception-caught
+    except Exception as ex:
+        error = ErrorModel(
+            message='Erro ao tentar recuperar filme',
+            execption=str(ex)
+        )
+        logger.error(error)
+        return dict(error), 500
+
 
 @app.route('/')
 def home():
     """Redireciona para /swagger
     """
-    return redirect('/openapi/swagger')
+    return redirect('/swagger')
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
