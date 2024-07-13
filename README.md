@@ -1,91 +1,107 @@
+
 # Api-Favorite-Movies
 
 *Back-end* do Projeto chamado **"*Favorite Movies*"**, cujo o objetivo é poder guardar os filmes favoritos.
 
-Esse projeto foi feito utilizando *Python*, com *Flask* sendo o *framework*, o banco está em *SQLite*, e o *ORM* que gerencia é o *SQLAlchemy*.
+Versão: 2.0
 
-Esse é um projeto feito por **Pedro Souza de Azevedo** como *MVP* para a disciplina de **Desenvolvimento *Full-Stack* Básico**, do curso de pós-graduação da ***PUC-Rio***.
+Esse projeto foi feito utilizando *Python*, com *Flask* sendo o *framework*, possuindo rotas para o *Front-End* em formato ***REST***, e recebendo informações de outros componentes, como a *API* Externa: https://www.omdbapi.com/ e o componente de dados: .
 
-O *Front-end* desse projeto está aqui: https://github.com/Pedro-dev-083/front-favorite-movies
+Esse é um projeto feito por **Pedro Souza de Azevedo** como *MVP* para a disciplina de **Arquitetura de Software**, do curso de pós-graduação da ***PUC-Rio***.
+
+O componente de dados desse projeto está aqui: https://github.com/Pedro-dev-083/MovieGraphQL
 
 ## Como configurar o projeto
+
 ### Clonagem do projeto:
-Para clonar o projeto em sua máquina, é necessário ter o Git instalado, e então, você pode usar o seguinte comando:
+
+Para clonar o projeto em sua máquina, é necessário ter o ***Git*** instalado, e então, você pode usar o seguinte comando:  
 
     git clone https://github.com/Pedro-dev-083/api-favorite-movies.git
+
 Logo após ao clonar, você pode abrir a pasta, e acessar o terminal dentro dela para seguir os próximos passos.
 
-### Banco de dados:
-O projeto utiliza de um banco ***SQLite***, e está configurado para criar um caso não haja, então, configuração de banco não é necessária.
+### Dependência de dados:
 
-### Versão do *Python*:
-Quanto a execução do projeto, é necessário ter instalado *Python* na máquina, sendo de preferência ***Python 3.12.2***, que foi a versão utilizada para o desenvolvimento desse projeto.
+O projeto utiliza de um componente externo encontrado nesse repositório: .
+É necessário esse componente externo estar instalado na máquina via ***Docker*** para o perfeito funcionamento desse projeto.
 
-### Uso do ambiente virtual:
-Também é recomendado a utilização de um ambiente virtual *Python* que pode ser criado e ativado da seguinte forma:
+### Variável de ambiente:
+Esse projeto utiliza de uma *API* externa que possui uma chave secreta, logo na raiz você encontrará um arquivo de ambiente chamado ***.env***, que possivelmente estará assim:
 
-#### No Windows:
-Dentro da pasta do projeto, abra o prompt de comando e use o comando :
+    API_KEY=your_secret_key
 
-	python -m venv venv 
-Logo após, ative o ambiente usando esse comando:
+ Para o seguimento do projeto você precisa preencher no lugar de ***your_secret_key***, uma chave, que você pode criar no site:
+ https://www.omdbapi.com/ 
+ Não se preocupe, é necessário apenas um cadastro, que é gratuito, para poder receber a chave e seguir com o projeto.
 
-    venv\Scripts\activate 
- 
- #### No Mac ou Linux:
- Dentro da pasta do projeto, abra o terminal e use o comando :
+### Uso do *Docker*:
 
-	python3 -m venv venv
-Logo após, ative o ambiente usando esse comando:
+#### Instalação do *Docker*:
+Quanto a execução do projeto, é necessário ter apenas o ***Docker*** instalado na sua máquina, que, caso não tenha, você pode seguir a documentação deles para poder instalar e utilizar em sua máquina.
+Link para a documentação de ***Docker***: https://www.docker.com/
 
-    source venv/bin/activate
+#### Ativar o *Docker*:
+Para instalar o projeto em sua máquina é necessário primeiro ativar o *Docker*.
+##### *Windows* e *Mac*:
+Para *Windows* e *Mac*, você pode apenas abrindo o ***Docker Desktop***.
+##### *Linux*:
+Para *Linux*, você precisa rodar o seguinte comando no **Terminal**:
+
+    sudo systemctl start docker
+
+### Instalação e Execução do Projeto:
+Logo após ativar o *Docker*, você deve abrir o terminal do seu sistema operacional na raiz do projeto, onde está localizado o ***Dockerfile***. Depois de estar aberto, você deve utilizar o seguinte comando para montar a imagem do projeto.
+
+    docker build -t api-favorite-movies . 
+
+Em primeira instância é normal demorar um pouco pois o projeto está sendo configurado pela primeira vez no seu *Docker*.
+Após terminar de montar a imagem do projeto, você deve rodar o seguinte comando para montar o *container* a partir da imagem que foi criada:
+
+    docker run -d -p 5000:5000 --name api-favorite-movies-container api-favorite-movies
+
+Pronto, agora para garantir se o *container* foi criado e executado corretamente você pode executar um comando que verifica todos os *conteiners* ativos:
+
+    docker ps
+
+Caso tenha funcionado irá aparecer algo como:
+
+    CONTAINER ID   IMAGE                 COMMAND           CREATED          STATUS          PORTS                    NAMES
+    7c7a29a01045   api-favorite-movies   "python app.py"   31 seconds ago   Up 31 seconds   0.0.0.0:5000->5000/tcp   api-favorite-movies-container
 
 
-#### Ambos os sistemas:
-Ao ativar o *venv* o terminal provavelmente estará assim:
+  Depois, caso queira parar a execução do *container* você pode usar o seguinte comando:
+  
+    docker stop api-favorite-movies-container
 
-    (venv) PS C:\Users\pedro\Codigos\api-favorite-movies>
+E para ativar novamente, com o seguinte comando:
 
-Para desativar o ambiente virtual, use esse comando no terminal ou prompt de comando:
+    docker start api-favorite-movies-container
 
-    deactivate
-### Instalar as dependências:
-As dependências estão um arquivo *txt* chamado de ***requirements.txt***, para instalar elas, basta usar o seguinte comando:
+Como o projeto foi montado pensando na porta 5000, você pode acessar com o *link* http://localhost:5000/ que irá para tela do *Swagger* com todas as rotas disponíveis.
 
-    pip install -r requirements.txt
-É necessário instalar tudo que está no *requirements.txt*, pois, nele que está tudo o que é necessário para o projeto rodar, como o *Flask* e *SQLAlchemy*, além do *OpenAPI*, que possibilita usar o *Swagger* como documentação para testar.
+### Comunicação entre containers
+Com os dois containers ativos, você irá precisar criar uma rede *Docker* para poder seguir com o processo.
+Para criar a rede é necessário o uso do comando:
 
- Caso dê certo, você receberá uma mensagem como essa:
+    docker network create container-network
+Logo após isso, precisará adicionar os dois containers a rede com os comandos:
 
-    Successfully installed Flask-3.0.2 Flask-Cors-3.0.10 Flask-SQLAlchemy-3.1.1 Jinja2-3.1.3 MarkupSafe-2.1.5 SQLAlchemy-2.0.29 SQLAlchemy-Utils-0.41.2 Six-1.16.0 Werkzeug-3.0.2 annotated-types-0.6.0 blinker-1.7.0 click-8.1.7 colorama-0.4.6 flask-openapi3-3.1.0 greenlet-3.0.3 itsdangerous-2.1.2 pydantic-2.6.4 pydantic_core-2.16.3 typing_extensions-4.10.0
-
-#### Atenção:
-Caso ocorra algum erro, aqui vai algumas sugestões:
-
- - **Verifique se sua versão do *Python* é a 3.0.0 ou superior:** Caso não, é recomendável atualizar, pois, como foi dito no começo, esse projeto foi desenvolvido em *Python3*.
- - **Verifique se houve algum problema de conexão:** Certos casos não instala todas as dependências, pois acontece algum problema de conexão, caso seja o caso, execute o comando de instalação novamente.
- - **Atualize as dependências**: Caso futuramente, o projeto não consiga rodar, possivelmente alguma dependência ficou defasada, procure ver qual dependência o terminal está reclamando, atualize a versão dela no *requirements.txt* e tente instalar novamente.
-
-   
- ### Executar o projeto
-Tendo seguido todos os passos com sucesso, agora resta executar o projeto, utilizando o seguinte comando:
-
-    python app.py 
-Caso tenha funcionado corretamente, você verá uma mensagem como essa:
-
-    Running on http://127.0.0.1:5000                                                                                                                        
-Com isso você pode utilizar da *API* dentro de sua máquina, para começar, você pode acessar o link http://localhost:5000/, que leva ao *Swagger*, onde está documentado todas as rotas que você pode usar.
-
-Se não funcionou, verifique os passos anteriores, e tente novamente.
+    docker network connect container-network movie-graphql-container
+    docker network connect container-network api-favorite-movies-container
 
 ## Utilizando o *Swagger*
-Esse projeto foi desenvolvido usando ***OpenAPI***, tendo o *Swagger* como documentação. Com o projeto aberto, você pode acessar o link que o terminal gerou, ou acessando o http://localhost:5000/ .
 
-Lá você irá encontrar todas as rotas que estão disponibilizadas para uso dentro desse projeto. Como por exemplo, a rota http://localhost:5000/movies que irá retornar todos os filmes salvos no banco.
+Esse projeto foi desenvolvido usando ***OpenAPI***, tendo o *Swagger* como documentação. Com o projeto aberto, você pode acessar o ***localhost*** mais a porta utilizada na construção, ou seja acessando o http://localhost:5000/ .
+
+Lá você irá encontrar todas as rotas que estão disponibilizadas para uso dentro desse projeto. Como por exemplo, a rota http://localhost:5000/moviesOnBase que irá retornar todos os filmes salvos no outro componente.
+
+  
 
 ## Considerações Finais
-Esse projeto foi utilizado apenas o *Python* com *Flask* e *SQLAlchemy*, tendo como objetivo a construção de uma API REST básica, com os recursos disponíveis.
 
-Dentro desse ponto, utilizar *Python*, uma tecnologia que por muito tempo ignorei, está sendo satisfatório, pois estou tendo a possibilidade de sair das tecnologias que eu estava acostumado, e podendo colocar minha lógica de programação mais em dia.
+Esse projeto foi utilizado apenas o *Python* com *Flask*, tendo como objetivo a construção de uma *API REST*, que pudesse se comunicar com outros componentes, como uma *API* Externa e outro componente externo criado por mim.
 
-Tentei adaptar o projeto a certas ideias que tenho conhecimento, como o uso de Services, e acredito que foi interessante por em prática tudo que fui aprendendo conforme o desenvolvimento. E espero conseguir seguir assim até o final do curso.
+Utilizar *Python*, ainda continua um desafio pra mim, porém tem sido interessante aprender novas formas de utilizar ele, como o próprio caso de puxar uma *API* Externa por ele, e montar um *container* para ele. E a questão da comunicação com outro componente por *GraphQL* foi desafiador no começo, mas satisfatório após conseguir concluir esse ponto, pois pude tomar conhecimento dessa outra forma de comunicação.
+
+Quanto ao quesito *Docker*, gostei bastante de fazer comunicações entre projetos de tecnologias diferentes, mostrando o poder dos *containers* e como pode ser possível várias equipes de diferentes *stacks* trabalharem em conjunto para um mesmo proposito.

@@ -1,0 +1,310 @@
+openapi: 3.0.0
+info:
+  title: API Filmes Favoritos
+  version: "2.0"
+paths:
+  /movieById:
+    get:
+      summary: "Faz a busca do filme pelo ID"
+      tags:
+        - Movies_External
+      parameters:
+        - name: externalId
+          in: query
+          required: true
+          schema:
+            type: string
+            example: tt0133093
+            description: "O ID externo do filme"
+      responses:
+        '200':
+          description: "Dados do filme retornados com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieResponseModel'
+        '400':
+          description: "Dados não retornados por erro do cliente"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        '500':
+          description: "Dados não retornados por erro interno"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /movieByName:
+    get:
+      summary: "Faz a busca do filme pelo nome"
+      tags:
+        - Movies_External
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "Matrix"
+            description: "O Nome do filme"
+      responses:
+        '200':
+          description: "Dados do filme retornados com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieResponseModel'
+        '400':
+          description: "Dados não retornados por erro do cliente"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        '500':
+          description: "Dados não retornados por erro interno"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /movieOnBase:
+    get:
+      summary: "Faz a busca do filme pelo Id da base"
+      tags:
+        - Movies_Base
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "1"
+            description: "O id do filme na base"
+      responses:
+        '200':
+          description: "Dados do filme retornados com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieBaseResponseModel'
+        '400':
+          description: "Dados não retornados por erro do cliente"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        '500':
+          description: "Dados não retornados por erro interno"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'          
+    post:
+      summary: "Adiciona um filme na base"
+      tags:
+        - Movies_Base
+      requestBody:
+        description: Objeto necessário para adicionar
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: The Matrix
+                external_Id:
+                  type: string
+                  example: tt0133093
+                favorite:
+                  type: boolean
+                  example: true
+              required:
+                - name
+                - external_Id
+      responses:
+        '200':
+          description: "Filme foi adicionado com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieBaseResponseModel'
+        '400':
+          description: "Dados não retornados por erro do cliente"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        '500':
+          description: "Dados não retornados por erro interno"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+    put:
+      summary: "Atualiza um filme na base"
+      tags:
+        - Movies_Base
+      requestBody:
+        description: Objeto necessário para atualizar
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                favorite:
+                  type: boolean
+                  example: true
+              required:
+                - id
+                - favorite
+      responses:
+        '200':
+          description: "Filme foi atualizado com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieBaseResponseModel'
+        '400':
+          description: "Dados não retornados por erro do cliente"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        '500':
+          description: "Dados não retornados por erro interno"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+    delete:
+      summary: "Apaga um filme na base"
+      tags:
+        - Movies_Base
+      requestBody:
+        description: Objeto necessário para deletar
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+              required:
+                - id
+      responses:
+        '200':
+          description: "Filme foi deletado com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseModel'
+        '400':
+          description: "Dados não retornados por erro do cliente"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        '500':
+          description: "Dados não retornados por erro interno"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'                
+  /moviesOnBase:
+    get:
+      summary: "Faz a busca de todos os filmes na base"
+      tags:
+        - Movies_Base
+      responses:
+        '200':
+          description: "Dados dos filmes da base retornados com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoviesCollectionBaseResponseModel'
+        '400':
+          description: "Dados não retornados por erro do cliente"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        '500':
+          description: "Dados não retornados por erro interno"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+components:
+  schemas:
+    MovieResponseModel:
+      type: object
+      properties:
+        title:
+          type: string
+          example: The Matrix
+        year:
+          type: string
+          example: 1999
+        genre:
+          type: string
+          example: Action, Drama, Fantasy
+        plot:
+          type: string
+          example: A computer hacker learns from mysterious rebels about the true nature of his reality and his role in the war against its controllers.
+        poster:
+          type: string
+          example: https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg
+        rated:
+          type: string
+          example: R
+        imdbID:
+          type: string
+          example: tt0133093
+    ErrorModel:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Filme não foi encontrado
+        execption:
+          type: string
+          example: An exception has been raised
+    MoviesCollectionBaseResponseModel:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            movies:
+              type: array
+              items:
+                $ref: '#/components/schemas/MovieBaseResponseModel'
+    MovieBaseResponseModel:
+      type: object
+      properties:
+        external_Id:
+          type: string
+          example: tt0133093
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: The Matrix
+        favorite:
+          type: boolean
+          example: true
+    ResponseModel:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Operação realizada com sucesso"
+        success:
+          type: boolean
+          example: true
